@@ -139,7 +139,11 @@ class FileOfflineStore(OfflineStore):
                 file_format = feature_view.batch_source._file_options.file_format
                 if isinstance(file_format, CsvFormat):
                     #Read offline csv data
-                    df_to_join = pd.read_csv(feature_view.batch_source.path)
+                    df_to_join = pd.read_csv(
+                        feature_view.batch_source.path,
+                        parse_dates=[event_timestamp_column, created_timestamp_column],
+                        date_parser=lambda col: pd.to_datetime(col, utc=True),
+                        )
 
                     # Rename columns by the field mapping dictionary if it exists
                     if feature_view.batch_source.field_mapping is not None:
@@ -148,7 +152,7 @@ class FileOfflineStore(OfflineStore):
                         mapped_cols = [
                             field_mapping[col] if col in field_mapping.keys() else col for col in cols
                         ]
-                        df_to_join.rename(columns=zip(cols, mapped_cols), inplace=True)
+                        df_to_join.rename(columns=dict(zip(cols, mapped_cols)), inplace=True)
                     
                     # Rename entity columns by the join_key_map dictionary if it exists
                     if feature_view.projection.join_key_map:
