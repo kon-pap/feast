@@ -7,6 +7,7 @@ import pytz
 from pydantic.typing import Literal
 
 from feast import FileSource, OnDemandFeatureView
+from feast.data_format import CsvFormat, ParquetFormat
 from feast.data_source import DataSource
 from feast.errors import FeastJoinKeysDuringMaterialization
 from feast.feature_view import DUMMY_ENTITY_ID, DUMMY_ENTITY_VAL, FeatureView
@@ -134,31 +135,55 @@ class FileOfflineStore(OfflineStore):
                 created_timestamp_column = (
                     feature_view.batch_source.created_timestamp_column
                 )
+                
+                file_format = feature_view.batch_source._file_options.file_format
+                if isinstance(file_format, CsvFormat()):
+                    #Read offline csv data
+                    df_to_join = pd.read_csv(feature_view.batch_source.path)
 
-                # Read offline parquet data in pyarrow format.
-                filesystem, path = FileSource.create_filesystem_and_path(
-                    feature_view.batch_source.path,
-                    feature_view.batch_source.file_options.s3_endpoint_override,
-                )
-                table = pyarrow.parquet.read_table(path, filesystem=filesystem)
+                    # Rename columns by the field mapping dictionary if it exists
+                    if feature_view.batch_source.field_mapping is not None:
+                        field_mapping = feature_view.batch_source.field_mapping
+                        cols = df_to_join.columns
+                        mapped_cols = [
+                            field_mapping[col] if col in field_mapping.keys() else col for col in cols
+                        ]
+                        df_to_join.rename(columns=zip(cols, mapped_cols), inplace=True)
+                    
+                    # Rename entity columns by the join_key_map dictionary if it exists
+                    if feature_view.projection.join_key_map:
+                        field_mapping = feature_view.projection.join_key_map
+                        cols = df_to_join.columns
+                        mapped_cols = [
+                            field_mapping[col] if col in field_mapping.keys() else col for col in cols
+                        ]
+                        df_to_join.rename(columns=zip(cols, mapped_cols), inplace=True)
 
-                # Rename columns by the field mapping dictionary if it exists
-                if feature_view.batch_source.field_mapping is not None:
-                    table = _run_field_mapping(
-                        table, feature_view.batch_source.field_mapping
+                else:
+                    # Read offline parquet data in pyarrow format.
+                    filesystem, path = FileSource.create_filesystem_and_path(
+                        feature_view.batch_source.path,
+                        feature_view.batch_source.file_options.s3_endpoint_override,
                     )
-                # Rename entity columns by the join_key_map dictionary if it exists
-                if feature_view.projection.join_key_map:
-                    table = _run_field_mapping(
-                        table, feature_view.projection.join_key_map
-                    )
+                    table = pyarrow.parquet.read_table(path, filesystem=filesystem)
 
-                # Convert pyarrow table to pandas dataframe. Note, if the underlying data has missing values,
-                # pandas will convert those values to np.nan if the dtypes are numerical (floats, ints, etc.) or boolean
-                # If the dtype is 'object', then missing values are inferred as python `None`s.
-                # More details at:
-                # https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#values-considered-missing
-                df_to_join = table.to_pandas()
+                    # Rename columns by the field mapping dictionary if it exists
+                    if feature_view.batch_source.field_mapping is not None:
+                        table = _run_field_mapping(
+                            table, feature_view.batch_source.field_mapping
+                        )
+                    # Rename entity columns by the join_key_map dictionary if it exists
+                    if feature_view.projection.join_key_map:
+                        table = _run_field_mapping(
+                            table, feature_view.projection.join_key_map
+                        )
+
+                    # Convert pyarrow table to pandas dataframe. Note, if the underlying data has missing values,
+                    # pandas will convert those values to np.nan if the dtypes are numerical (floats, ints, etc.) or boolean
+                    # If the dtype is 'object', then missing values are inferred as python `None`s.
+                    # More details at:
+                    # https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#values-considered-missing
+                    df_to_join = table.to_pandas()
 
                 # Make sure all timestamp fields are tz-aware. We default tz-naive fields to UTC
                 df_to_join[event_timestamp_column] = df_to_join[
