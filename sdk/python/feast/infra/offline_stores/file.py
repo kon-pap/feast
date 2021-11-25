@@ -137,7 +137,7 @@ class FileOfflineStore(OfflineStore):
                 )
                 
                 file_format = feature_view.batch_source._file_options.file_format
-                if isinstance(file_format, CsvFormat()):
+                if isinstance(file_format, CsvFormat):
                     #Read offline csv data
                     df_to_join = pd.read_csv(feature_view.batch_source.path)
 
