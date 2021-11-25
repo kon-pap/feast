@@ -43,6 +43,8 @@ class FileFormat(ABC):
         fmt = proto.WhichOneof("format")
         if fmt == "parquet_format":
             return ParquetFormat()
+        if fmt == "csv_format":
+            return CsvFormat()
         if fmt is None:
             return None
         raise NotImplementedError(f"FileFormat is unsupported: {fmt}")
@@ -65,6 +67,16 @@ class ParquetFormat(FileFormat):
     def __str__(self):
         return "parquet"
 
+class CsvFormat(FileFormat):
+    """
+    Defines the Csv data format
+    """
+
+    def to_proto(self):
+        return FileFormatProto(csv_format=FileFormatProto.CsvFormat())
+
+    def __str__(self):
+        return "csv"
 
 class StreamFormat(ABC):
     """

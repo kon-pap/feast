@@ -24,7 +24,7 @@ class FileSource(DataSource):
         date_partition_column: Optional[str] = "",
         s3_endpoint_override: Optional[str] = None,
     ):
-        """Create a FileSource from a file containing feature data. Only Parquet format supported.
+        """Create a FileSource from a file containing feature data. Only Parquet & Csv formats supported.
 
         Args:
 
@@ -175,7 +175,7 @@ class FileOptions:
         FileOptions initialization method
 
         Args:
-            file_format (FileFormat, optional): file source format eg. parquet
+            file_format (FileFormat, optional): file source format eg. parquet, csv
             file_url (str, optional): file source url eg. s3:// or local file
             s3_endpoint_override (str, optional): custom s3 endpoint (used only with s3 file_url)
         """
