@@ -26,9 +26,11 @@ option java_package = "feast.proto.core";
 message FileFormat {
   // Defines options for the Parquet data format
   message ParquetFormat {}
+  message CsvFormat {}
   
   oneof format {
     ParquetFormat parquet_format = 1;
+    CsvFormat csv_format = 2;
   }
 }
 
