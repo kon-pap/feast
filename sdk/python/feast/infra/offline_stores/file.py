@@ -313,10 +313,24 @@ class FileOfflineStore(OfflineStore):
 
         # Create lazy function that is only called from the RetrievalJob object
         def evaluate_offline_job():
-            filesystem, path = FileSource.create_filesystem_and_path(
-                data_source.path, data_source.file_options.s3_endpoint_override
-            )
-            source_df = pd.read_parquet(path, filesystem=filesystem)
+
+            #Check format
+            file_format = data_source._file_options.file_format
+            if isinstance(file_format, CsvFormat):
+                tz_columns = [event_timestamp_column, created_timestamp_column] if created_timestamp_column else [event_timestamp_column]
+                #Read offline csv data
+                source_df = pd.read_csv(
+                    data_source.path,
+                    parse_dates=tz_columns,
+                    date_parser=lambda col: pd.to_datetime(col, utc=True),
+                )
+            
+            else:
+                filesystem, path = FileSource.create_filesystem_and_path(
+                    data_source.path, data_source.file_options.s3_endpoint_override
+                )
+                source_df = pd.read_parquet(path, filesystem=filesystem)
+            
             # Make sure all timestamp fields are tz-aware. We default tz-naive fields to UTC
             source_df[event_timestamp_column] = source_df[event_timestamp_column].apply(
                 lambda x: x if x.tzinfo is not None else x.replace(tzinfo=pytz.utc)
