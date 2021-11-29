@@ -162,7 +162,7 @@ class FileOfflineStore(OfflineStore):
                         mapped_cols = [
                             field_mapping[col] if col in field_mapping.keys() else col for col in cols
                         ]
-                        df_to_join.rename(columns=zip(cols, mapped_cols), inplace=True)
+                        df_to_join.rename(columns=dict(zip(cols, mapped_cols)), inplace=True)
 
                 else:
                     # Read offline parquet data in pyarrow format.
