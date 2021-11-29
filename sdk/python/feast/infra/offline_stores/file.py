@@ -138,10 +138,11 @@ class FileOfflineStore(OfflineStore):
                 
                 file_format = feature_view.batch_source._file_options.file_format
                 if isinstance(file_format, CsvFormat):
+                    tz_columns = [event_timestamp_column, created_timestamp_column] if created_timestamp_column else [event_timestamp_column]
                     #Read offline csv data
                     df_to_join = pd.read_csv(
                         feature_view.batch_source.path,
-                        parse_dates=[event_timestamp_column, created_timestamp_column],
+                        parse_dates=tz_columns,
                         date_parser=lambda col: pd.to_datetime(col, utc=True),
                         )
 
